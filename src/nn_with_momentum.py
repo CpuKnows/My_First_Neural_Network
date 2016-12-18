@@ -5,15 +5,30 @@ tldr:   Network for forward and backward propagation
 """
 
 from __future__ import print_function
+import time
 import numpy as np
 
-from units import sigmoid, tanh
+from units import sigmoid_activation, tanh_activation
 
 
 class Network(object):
 
-    def __init__(self):
-        np.random.seed(42)
+    def __init__(self, layers):
+        """
+        :param layers: an array of layer sizes
+        """
+        self.num_layers = len(layers)
+        self.layers = layers
+        self.weights = self.initialize_weights()
+
+    def initialize_weights(self):
+        """
+        Initialize weights with mean 0 and range [-1, 1]
+        :return: weights
+        """
+        weights = [2 * np.random.random([x, x_next]) - 1
+                   for x, x_next in zip(self.layers[:-1], self.layers[1:])]
+        return weights
 
     def iter_batches(self, x, y, batch_size, shuffle=False):
         assert x.shape[0] == y.shape[0]
@@ -33,65 +48,61 @@ class Network(object):
     def mini_batch_learning(self, x, y, n_epoch=10000, batch_size=100, learning_rate=0.01,
                             momentum=False, print_error=False):
         velocity_decay = 0.5
-        velocity_0, velocity_1, velocity_2 = 0, 0, 0
+        velocities = [0] * (self.num_layers - 1)
 
-        # Initialize weights with mean 0 and range [-1, 1]
-        syn0 = 2 * np.random.random([1, 10]) - 1
-        syn1 = 2 * np.random.random([10, 10]) - 1
-        syn2 = 2 * np.random.random([10, 1]) - 1
+        start_time_training = time.clock()
 
         for epoch in xrange(n_epoch):
+            start_time = time.clock()
+
             for batch in self.iter_batches(x, y, batch_size, shuffle=True):
                 x_batch, y_batch = batch
 
                 # forward propagation
-                l0 = np.array([x_batch]).T
-                l1 = tanh(np.dot(l0, syn0))
-                l2 = tanh(np.dot(l1, syn1))
-                l3 = np.dot(l2, syn2)
-
-                # calc error
-                l3_error = l3 - np.array([y_batch]).T
+                layers = self.forward_prop(x_batch)
 
                 # back propagation
-                l3_delta = l3_error
-
-                l2_error = np.dot(l3_delta, syn2.T)
-                l2_delta = l2_error * tanh(l2, True)
-
-                l1_error = np.dot(l2_delta, syn1.T)
-                l1_delta = l1_error * tanh(l1, True)
+                layer_errors, layer_deltas = self.backward_prop(layers, y_batch)
 
                 # update weights
                 if momentum:
-                    velocity_2 = velocity_decay * velocity_2 - learning_rate * np.dot(l2.T, l3_delta)
-                    velocity_1 = velocity_decay * velocity_1 - learning_rate * np.dot(l1.T, l2_delta)
-                    velocity_0 = velocity_decay * velocity_0 - learning_rate * np.dot(l0.T, l1_delta)
-                    syn2 += velocity_2
-                    syn1 += velocity_1
-                    syn0 += velocity_0
+                    velocities = [velocity_decay * v - learning_rate * np.dot(l.T, d)
+                                  for v, l, d in zip(velocities, layers[:-1], layer_deltas)]
+
+                    self.weights = [w + v for w, v in zip(self.weights, velocities)]
                 else:
-                    syn2 += -1 * learning_rate * np.dot(l2.T, l3_delta)
-                    syn1 += -1 * learning_rate * np.dot(l1.T, l2_delta)
-                    syn0 += -1 * learning_rate * np.dot(l0.T, l1_delta)
+                    self.weights = [w + (-1 * learning_rate * np.dot(l.T, d))
+                                    for w, l, d in zip(self.weights, layers[:-1], layer_deltas)]
 
             if print_error and epoch % 1000 == 0:
-                print('Error:', np.mean(np.abs(l3_error)))
+                print('Epoch: %.0f \tError: %.4f \telapsed: %.2f ms' %
+                      (epoch,
+                       np.mean(np.abs(layer_errors[-1])),
+                       (time.clock() - start_time) * 1000))
 
-        return syn0, syn1, syn2
+        if print_error:
+            print('Training time: %.0f sec' % (time.clock() - start_time_training))
 
-    def forward_prop(self, x, weights, y=None):
-        syn0, syn1, syn2 = weights
+    def forward_prop(self, x):
+        layers = list()
+        layers.append(np.array([x]).T)
 
-        # forward propagation
-        l0 = np.array([x]).T
-        l1 = tanh(np.dot(l0, syn0))
-        l2 = tanh(np.dot(l1, syn1))
-        l3 = np.dot(l2, syn2)
+        for w in self.weights[:-1]:
+            layers.append(tanh_activation(np.dot(layers[-1], w)))
 
-        # calc error
-        if y is not None:
-            l3_error = l3 - np.array([y]).T
-            print('Error:' + str(np.mean(np.abs(l3_error))))
+        layers.append(np.dot(layers[-1], self.weights[-1]))
 
-        return l3
+        return layers
+
+    def backward_prop(self, layers, y):
+        layer_errors = [layers[-1] - np.array([y]).T]
+        layer_deltas = [layer_errors[-1]]
+
+        for layer_idx in xrange(self.num_layers - 2, 0, -1):
+            layer_errors.append(np.dot(layer_deltas[-1], self.weights[layer_idx - 3].T))
+            layer_deltas.append(layer_errors[-1] * tanh_activation(layers[layer_idx], True))
+
+        layer_errors.reverse()
+        layer_deltas.reverse()
+
+        return layer_errors, layer_deltas
