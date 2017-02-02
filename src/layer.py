@@ -67,17 +67,17 @@ class Layer(object):
             self.node_values = self.activation(x)
             return np.dot(self.node_values, self.weights)
 
-    def backward_prop(self, layer_delta, cost_function=None):
+    def backward_prop(self, layer_delta):
         """
         Backward propagation of the above layers error gradient.
 
         :param layer_delta: gradient change of above layer
-        :param cost_function: cost function of network. Quadratic for regression, cross-entropy for classification
         :return: error and gradient change of this layer
         """
         if self.layer_type == 'output':
             # In output layer_delta == y
-            #layer_error = cost_function(self.node_values, layer_delta)
+            #layer_error = self.cost_function(self.node_values, layer_delta)
+            #layer_delta = self.cost_function(self.node_values, layer_delta)
             layer_error = self.node_values - layer_delta
             layer_delta = layer_error * self.activation_prime(self.node_values)
         elif self.layer_type == 'input':

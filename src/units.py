@@ -15,12 +15,6 @@ def sigmoid_prime(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-#def tanh_activation(x, deriv=False):
-#    if deriv:
-#        return 1 - x ** 2
-#    return (2 / (1 + np.exp(-2 * x))) - 1
-
-
 def tanh(x):
     return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 
