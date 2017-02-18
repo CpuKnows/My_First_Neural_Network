@@ -9,6 +9,7 @@ import time
 import numpy as np
 
 from layer import Layer
+from error_functions import accuracy, logloss
 
 
 class Network(object):
@@ -18,18 +19,19 @@ class Network(object):
         """
         self.layers = list()
         self.num_layers = 0
+        self.training_error = list()
+        self.validation_error = list()
 
-    def add_layer(self, layer_type, layer_size, activation=None, activation_prime=None):
+    def add_layer(self, new_layer):
         """
-        Adds a layer of type, size, and activation function
+        Adds a layer to the network
 
-        :param layer_type: input, output, or hidden
-        :param layer_size: number of nodes in layer
-        :param activation: activation function (linear, sigmoid, tanh, relu)
-        :param activation_prime: derivative of activation function (linear, sigmoid, tanh, relu)
+        :param new_layer: layer to add
         :return: none
         """
-        self.layers.append(Layer(layer_type, layer_size, activation, activation_prime))
+        isinstance(new_layer, Layer)
+
+        self.layers.append(new_layer)
         self.num_layers += 1
 
     def clear_layers(self):
@@ -75,20 +77,26 @@ class Network(object):
 
             yield x[batch_indices], y[batch_indices]
 
-    def mini_batch_learning(self, x, y, n_epoch=10000, batch_size=100, learning_rate=0.01,
-                            momentum=False, print_error=False):
+    def mini_batch_learning(self, x, y, x_val=None, y_val=None, n_epoch=10000, batch_size=100, learning_rate=0.01,
+                            momentum=False, print_error=False, print_every=None):
         """
         Handles forward and backward propagation for learning.
 
         :param x: feature data
         :param y: ground truth
+        :param x_val: validation feature data
+        :param y_val: validation ground truth
         :param n_epoch: number of epochs
         :param batch_size: number of training cases in a mini-batch
         :param learning_rate: learning rate parameter
         :param momentum: T/F use momentum
         :param print_error: T/F print error every so often
+        :param print_every: how often to print error
         :return: none
         """
+        training_error = list()
+        validation_error = list()
+
         velocity_decay = 0.5
         velocities = [0] * (self.num_layers - 1)
 
@@ -129,13 +137,22 @@ class Network(object):
 
                 else:
                     for l, d in zip(self.layers[:-1], layer_deltas):
-                        l.weights += -1 * learning_rate * np.dot(l.node_values.T, d)
+                        l.weights += -1 * learning_rate / batch_size * np.dot(l.node_values.T, d)
 
-            if print_error and epoch % 10 == 0:
-                print('Epoch: %.0f \tError: %.4f \telapsed: %.2f ms' %
+            if x_val is not None and y_val is not None:
+                results = self.forward_prop(x)
+                self.training_error.append(logloss(results, y))
+                results = self.forward_prop(x_val)
+                self.validation_error.append(logloss(results, y_val))
+
+            if print_error and epoch % print_every == 0:
+                time_passed = time.clock() - start_time
+                results = self.forward_prop(x)
+                log_loss = logloss(results, y)
+                print('Epoch: %.0f \tLog Loss: %.4f \tElapsed: %.0f s' %
                       (epoch,
-                       np.mean(np.abs(layer_errors[-1])),
-                       (time.clock() - start_time) * 1000))
+                       log_loss,
+                       time_passed))
 
         if print_error:
             print('Training time: %.0f sec' % (time.clock() - start_time_training))
