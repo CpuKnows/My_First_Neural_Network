@@ -5,27 +5,26 @@ tldr:   Input Layers
 """
 
 from __future__ import print_function
-
 import numpy as np
+
 from layer import Layer
 
 
 class InputLayer(Layer):
 
-    def __init__(self, layer_size, layer_type, below=None, above=None):
+    def __init__(self, layer_size, layer_type, bottom=None, top=None):
         """
         :param layer_size: number of nodes in layer
-        :param below: object of class layer below in network
-        :param above: object of class layer above in network
+        :param layer_type: input/hidden/output
+        :param bottom: layer object below in network
+        :param top: layer object above in network
         """
         super(Layer, self).__init__()
         self.layer_size = layer_size
+        assert layer_type is 'input'
         self.layer_type = layer_type
-        self.below = below
-        self.above = above
-        self.weights = None
-        self.signal_values = None
-        self.activation_values = None
+        self.bottom = bottom
+        self.top = top
 
     def forward_prop(self, x):
         """
@@ -34,9 +33,7 @@ class InputLayer(Layer):
         :param x: forward propagation of previous layer
         :return: forward propagation of this layer
         """
-
-        self.activation_values = x
-        return np.dot(self.activation_values, self.weights)
+        return self.top.forward_prop(x)
 
     def backward_prop(self, layer_delta):
         """
@@ -45,8 +42,7 @@ class InputLayer(Layer):
         :param layer_delta: gradient change of above layer
         :return: error and gradient change of this layer
         """
-
         layer_error = None
-        #layer_delta = None
+        # layer_delta = None
 
         return layer_error, layer_delta

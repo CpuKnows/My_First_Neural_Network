@@ -10,19 +10,16 @@ import numpy as np
 
 class Layer(object):
 
-    def __init__(self, layer_size, layer_type, below=None, above=None):
+    def __init__(self, layer_size, layer_type, bottom=None, top=None):
         """
         :param layer_size: number of nodes in layer
-        :param below: object of class layer below in network
-        :param above: object of class layer above in network
+        :param bottom: layer object below in network
+        :param top: layer object above in network
         """
         self.layer_size = layer_size
         self.layer_type = layer_type
-        self.below = below
-        self.above = above
-        self.weights = None
-        self.signal_values = None
-        self.activation_values = None
+        self.bottom = bottom
+        self.top = top
 
     def forward_prop(self, x):
         """
@@ -33,10 +30,7 @@ class Layer(object):
         :param x: forward propagation of previous layer
         :return: forward propagation of this layer
         """
-
-        self.signal_values = x
-        self.activation_values = self.signal_values
-        return np.dot(self.activation_values, self.weights)
+        return self.top.forward_prop(x)
 
     def backward_prop(self, layer_delta):
         """
@@ -45,11 +39,10 @@ class Layer(object):
         :param layer_delta: gradient change of above layer
         :return: error and gradient change of this layer
         """
-
         if self.layer_type is 'output':
-            layer_error = layer_delta - self.activation_values
+            layer_error = self.top.activation_values - layer_delta
         else:
-            layer_error = np.dot(layer_delta, self.weights.T)
+            layer_error = self.top.backward_prop(layer_delta)
         layer_delta = layer_error
 
         return layer_error, layer_delta

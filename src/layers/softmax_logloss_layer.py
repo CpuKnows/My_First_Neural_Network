@@ -5,27 +5,25 @@ tldr:   Sigmoid Layer
 """
 
 from __future__ import print_function
-
 import numpy as np
+
 from layer import Layer
 
 
 class SoftmaxLoglossLayer(Layer):
 
-    def __init__(self, layer_size, layer_type, below=None, above=None):
+    def __init__(self, layer_size, layer_type, bottom=None, top=None):
         """
         :param layer_size: number of nodes in layer
-        :param below: object of class layer below in network
-        :param above: object of class layer above in network
+        :param layer_type: input/hidden/output
+        :param bottom: layer object below in network
+        :param top: layer object above in network
         """
         super(Layer, self).__init__()
         self.layer_size = layer_size
         self.layer_type = layer_type
-        self.below = below
-        self.above = above
-        self.weights = None
-        self.signal_values = None
-        self.activation_values = None
+        self.bottom = bottom
+        self.top = top
 
     def forward_prop(self, x):
         """
@@ -34,10 +32,7 @@ class SoftmaxLoglossLayer(Layer):
         :param x: forward propagation of previous layer
         :return: forward propagation of this layer
         """
-
-        self.signal_values = x
-        self.activation_values = self.softmax(self.signal_values)
-        return self.activation_values
+        return self.top.forward_prop(self.softmax(x))
 
     def backward_prop(self, layer_delta):
         """
@@ -51,7 +46,7 @@ class SoftmaxLoglossLayer(Layer):
         layer_error = np.sum([-1 * np.nan_to_num(np.log(i[j])) for i, j in zip(layer_delta, y_index)]) / \
                       layer_delta.shape[0]
 
-        temp_delta = np.copy(self.activation_values)
+        temp_delta = np.copy(self.top.activation_values)
         temp_delta[range(layer_delta.shape[0]), np.argmax(layer_delta, axis=1)] -= 1
 
         return layer_error, temp_delta

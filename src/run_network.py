@@ -8,7 +8,7 @@ from __future__ import print_function
 import pickle
 import numpy as np
 
-from nn_with_adv_layers import Network
+from sgd import SGD
 from layers.input_layer import InputLayer
 from layers.linear_layer import LinearLayer
 from layers.sigmoid_layer import SigmoidLayer
@@ -29,7 +29,7 @@ x_val = None
 y_val = None
 
 # Create NN
-nn = Network()
+nn = SGD()
 
 nn.add_layer(InputLayer(10))
 nn.add_layer(SigmoidLayer(10))
