@@ -12,7 +12,7 @@ from layer import Layer
 
 class SigmoidLayer(Layer):
 
-    def __init__(self, layer_size, below=None, above=None):
+    def __init__(self, layer_size, layer_type, below=None, above=None):
         """
         :param layer_size: number of nodes in layer
         :param below: object of class layer below in network
@@ -20,11 +20,12 @@ class SigmoidLayer(Layer):
         """
         super(Layer, self).__init__()
         self.layer_size = layer_size
+        self.layer_type = layer_type
         self.below = below
         self.above = above
-        self.node_values = None
         self.weights = None
-        self.dropout = False
+        self.signal_values = None
+        self.activation_values = None
 
     def forward_prop(self, x):
         """
@@ -34,8 +35,12 @@ class SigmoidLayer(Layer):
         :return: forward propagation of this layer
         """
 
-        self.node_values = self.sigmoid(x)
-        return np.dot(self.node_values, self.weights)
+        self.signal_values = x
+        self.activation_values = self.sigmoid(x)
+        if self.layer_type is not 'output':
+            return np.dot(self.activation_values, self.weights)
+        else:
+            return self.activation_values
 
     def backward_prop(self, layer_delta):
         """
@@ -45,8 +50,11 @@ class SigmoidLayer(Layer):
         :return: error and gradient change of this layer
         """
 
-        layer_error = np.dot(layer_delta, self.weights.T)
-        layer_delta = layer_error * self.sigmoid_prime(self.node_values)
+        if self.layer_type is 'output':
+            layer_error = self.activation_values - layer_delta
+        else:
+            layer_error = np.dot(layer_delta, self.weights.T)
+        layer_delta = layer_error * self.sigmoid_prime(self.signal_values)
 
         return layer_error, layer_delta
 

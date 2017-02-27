@@ -12,7 +12,7 @@ from layer import Layer
 
 class SoftmaxLoglossLayer(Layer):
 
-    def __init__(self, layer_size, below=None, above=None):
+    def __init__(self, layer_size, layer_type, below=None, above=None):
         """
         :param layer_size: number of nodes in layer
         :param below: object of class layer below in network
@@ -20,11 +20,12 @@ class SoftmaxLoglossLayer(Layer):
         """
         super(Layer, self).__init__()
         self.layer_size = layer_size
+        self.layer_type = layer_type
         self.below = below
         self.above = above
-        self.node_values = None
         self.weights = None
-        self.dropout = False
+        self.signal_values = None
+        self.activation_values = None
 
     def forward_prop(self, x):
         """
@@ -34,8 +35,9 @@ class SoftmaxLoglossLayer(Layer):
         :return: forward propagation of this layer
         """
 
-        self.node_values = self.softmax(x)
-        return self.node_values
+        self.signal_values = x
+        self.activation_values = self.softmax(self.signal_values)
+        return self.activation_values
 
     def backward_prop(self, layer_delta):
         """
@@ -46,9 +48,10 @@ class SoftmaxLoglossLayer(Layer):
         """
 
         y_index = np.argmax(layer_delta, axis=1)
-        layer_error = np.sum([-1 * np.log(i[j]) for i, j in zip(layer_delta, y_index)]) / layer_delta.shape[0]
+        layer_error = np.sum([-1 * np.nan_to_num(np.log(i[j])) for i, j in zip(layer_delta, y_index)]) / \
+                      layer_delta.shape[0]
 
-        temp_delta = np.copy(self.node_values)
+        temp_delta = np.copy(self.activation_values)
         temp_delta[range(layer_delta.shape[0]), np.argmax(layer_delta, axis=1)] -= 1
 
         return layer_error, temp_delta

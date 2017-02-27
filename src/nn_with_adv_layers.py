@@ -8,6 +8,7 @@ from __future__ import print_function
 import time
 import numpy as np
 
+from blob import Blob
 from layer import Layer
 from error_functions import accuracy, logloss
 
@@ -19,6 +20,8 @@ class Network(object):
         """
         self.layers = list()
         self.num_layers = 0
+        self.blobs = list()
+        self.num_blobs = 0
         self.training_error = list()
         self.validation_error = list()
 
@@ -43,6 +46,26 @@ class Network(object):
         self.layers = list()
         self.num_layers = 0
 
+    def initialize_blobs(self):
+        """
+        Initialize blobs to be the appropriate size.
+
+        :return: none
+        """
+
+        for l, l_next in zip(self.layers[:-1], self.layers[1:]):
+            self.blobs.append(Blob(l, l_next))
+            self.num_blobs += 1
+
+    def clear_blobs(self):
+        """
+        remove all blobs
+
+        :return: none
+        """
+        self.blobs = list()
+        self.num_blobs = 0
+
     def initialize_weights(self):
         """
         Initialize weights with mean 0 and range [-1, 1]
@@ -52,6 +75,9 @@ class Network(object):
 
         for l, l_next in zip(self.layers[:-1], self.layers[1:]):
             l.weights = 2 * np.random.random([l.layer_size, l_next.layer_size]) - 1
+
+        #for b in self.blobs:
+        #    b.set_weights(2 * np.random.random(b.shape) - 1)
 
     def iter_batches(self, x, y, batch_size, shuffle=False):
         """
@@ -94,8 +120,8 @@ class Network(object):
         :param print_every: how often to print error
         :return: none
         """
-        training_error = list()
-        validation_error = list()
+        self.training_error = list()
+        self.validation_error = list()
 
         velocity_decay = 0.5
         velocities = [0] * (self.num_layers - 1)
@@ -129,7 +155,7 @@ class Network(object):
 
                 # update weights
                 if momentum:
-                    velocities = [velocity_decay * v - (learning_rate / batch_size) * np.dot(l.node_values.T, d)
+                    velocities = [velocity_decay * v - (learning_rate / batch_size) * np.dot(l.activation_values.T, d)
                                   for v, l, d in zip(velocities, self.layers[:-1], layer_deltas)]
 
                     for l, v in zip(self.layers[:-1], velocities):
@@ -137,7 +163,7 @@ class Network(object):
 
                 else:
                     for l, d in zip(self.layers[:-1], layer_deltas):
-                        l.weights += -1 * learning_rate / batch_size * np.dot(l.node_values.T, d)
+                        l.weights += -1 * learning_rate / batch_size * np.dot(l.activation_values.T, d)
 
             if x_val is not None and y_val is not None:
                 results = self.forward_prop(x)
@@ -147,11 +173,13 @@ class Network(object):
 
             if print_error and epoch % print_every == 0:
                 time_passed = time.clock() - start_time
-                results = self.forward_prop(x)
-                log_loss = logloss(results, y)
-                print('Epoch: %.0f \tLog Loss: %.4f \tElapsed: %.0f s' %
+                results_train = self.forward_prop(x)
+                results_val = self.forward_prop(x_val)
+                #log_loss = logloss(results, y)
+                print('Epoch: %.0f \tTrain Error: %.4f \tValidation Error: %.4f \tElapsed: %.0f s' %
                       (epoch,
-                       log_loss,
+                       accuracy(results_train, y),
+                       accuracy(results_val, y_val),
                        time_passed))
 
         if print_error:

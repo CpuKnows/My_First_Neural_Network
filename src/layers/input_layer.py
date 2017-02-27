@@ -12,7 +12,7 @@ from layer import Layer
 
 class InputLayer(Layer):
 
-    def __init__(self, layer_size, below=None, above=None):
+    def __init__(self, layer_size, layer_type, below=None, above=None):
         """
         :param layer_size: number of nodes in layer
         :param below: object of class layer below in network
@@ -20,11 +20,12 @@ class InputLayer(Layer):
         """
         super(Layer, self).__init__()
         self.layer_size = layer_size
+        self.layer_type = layer_type
         self.below = below
         self.above = above
-        self.node_values = None
         self.weights = None
-        self.dropout = False
+        self.signal_values = None
+        self.activation_values = None
 
     def forward_prop(self, x):
         """
@@ -34,8 +35,8 @@ class InputLayer(Layer):
         :return: forward propagation of this layer
         """
 
-        self.node_values = x
-        return np.dot(self.node_values, self.weights)
+        self.activation_values = x
+        return np.dot(self.activation_values, self.weights)
 
     def backward_prop(self, layer_delta):
         """
